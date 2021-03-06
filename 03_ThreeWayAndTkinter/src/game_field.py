@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
+import functools
+import operator
 import random
 import tkinter as tk
 import itertools
 from typing import Callable, List, Set
 
+from cell import Cell
 from direction import Direction
 
 
 class GameField(tk.LabelFrame):
+    # TODO: remove frame label
     _size = 4
     _cell_count = _size * _size - 1
 
@@ -19,11 +23,12 @@ class GameField(tk.LabelFrame):
             self.columnconfigure(i, weight=1, uniform="game_field_column")
             self.rowconfigure(i, weight=1, uniform="game_field_row")
 
-        self.__cells: List[tk.Button] = []
+        self.__cells: List[Cell] = []
         self.reset_field()
 
     def reset_field(self):
         self.__generate_field()
+        # TODO: check if puzzle is solvable
         while self._is_game_won():
             # NOTE: В случае, если сгенерированное поле удовлетворяет условию выигрыша, перегенерируем его
             self.__generate_field()
@@ -36,75 +41,56 @@ class GameField(tk.LabelFrame):
         random.shuffle(positions)
 
         self.__cells = [
-            self._create_button_at_position(
-                label=i + 1, row=positions[i][0], column=positions[i][1]
+            Cell(
+                self,
+                id=i + 1,
+                row=positions[i][0],
+                column=positions[i][1],
+                on_click=self._on_cell_click,
             )
             for i in range(self._cell_count)
         ]
 
-    def _create_button_at_position(self, *, label: int, column: int, row: int):
-        # TODO: use a separate class for a cell
-        text = f"{label}"
-        btn = tk.Button(self, text=text, command=lambda: self._on_cell_click(text))
-        btn.grid(sticky="NEWS", row=row, column=column)
-        return btn
-
-    def _on_cell_click(self, text: str):
-        found = list(filter(lambda c: c.cget("text") == text, self.__cells))
-        if len(found) == 0:
-            return
-        clicked_cell = found[0]
-        self._move_cell(clicked_cell)
+    def _on_cell_click(self, cell: Cell):
+        self._move_cell(cell)
         if self._is_game_won():
             self._on_win()
 
-    def _move_cell(self, cell: tk.Button):
-        # TODO: prettify move logic
-        cell_info = cell.grid_info()
-        cell_i, cell_j = cell_info["row"], cell_info["column"]
-        filled_directions: Set[Direction] = set()
+    def _move_cell(self, cell: Cell):
+        # find possible directions
+        possible_directions = Direction.all_directions()
         for c in self.__cells:
-            info = c.grid_info()
-            i, j = info["row"], info["column"]
-            if j - cell_j == 0:
-                if i - cell_i == 1:
-                    filled_directions.add(Direction.DOWN)
-                elif i - cell_i == -1:
-                    filled_directions.add(Direction.UP)
-            elif i - cell_i == 0:
-                if j - cell_j == 1:
-                    filled_directions.add(Direction.RIGHT)
-                elif j - cell_j == -1:
-                    filled_directions.add(Direction.LEFT)
-        if cell_j == self._size - 1:
-            filled_directions.add(Direction.RIGHT)
-        if cell_j == 0:
-            filled_directions.add(Direction.LEFT)
-        if cell_i == self._size - 1:
-            filled_directions.add(Direction.DOWN)
-        if cell_i == 0:
-            filled_directions.add(Direction.UP)
+            if c.column - cell.column == 0:
+                if c.row - cell.row == 1:
+                    possible_directions.remove(Direction.DOWN)
+                elif c.row - cell.row == -1:
+                    possible_directions.remove(Direction.UP)
+            elif c.row - cell.row == 0:
+                if c.column - cell.column == 1:
+                    possible_directions.remove(Direction.RIGHT)
+                elif c.column - cell.column == -1:
+                    possible_directions.remove(Direction.LEFT)
+        if cell.column == self._size - 1:
+            possible_directions.remove(Direction.RIGHT)
+        if cell.column == 0:
+            possible_directions.remove(Direction.LEFT)
+        if cell.row == self._size - 1:
+            possible_directions.remove(Direction.DOWN)
+        if cell.row == 0:
+            possible_directions.remove(Direction.UP)
 
-        empty_direction = Direction.all_directions() - filled_directions
-        if len(empty_direction) == 0:
+        # move if possible
+        if len(possible_directions) == 0:
             return
-        free_direction = list(empty_direction)[0]
-        if free_direction == Direction.LEFT:
-            cell_j -= 1
-        elif free_direction == Direction.RIGHT:
-            cell_j += 1
-        elif free_direction == Direction.UP:
-            cell_i -= 1
-        elif free_direction == Direction.DOWN:
-            cell_i += 1
-        cell.grid(row=cell_i, column=cell_j)
+        cell.move(list(possible_directions)[0])
 
     def _is_game_won(self):
-        is_won = True
-        for c in self.__cells:
-            info = c.grid_info()
-            i, j = info["row"], info["column"]
-            actual_id = int(c.cget("text"))
-            expected_id = i * self._size + j + 1
-            is_won = is_won and actual_id == expected_id
-        return is_won
+        return functools.reduce(
+            operator.and_,
+            map(lambda c: self._is_positioned_correctly(c), self.__cells),
+            True,
+        )
+
+    @classmethod
+    def _is_positioned_correctly(cls, cell: Cell):
+        return cell.id == cell.row * cls._size + cell.column + 1
