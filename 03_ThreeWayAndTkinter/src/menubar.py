@@ -4,7 +4,7 @@ import tkinter as tk
 from typing import Callable
 
 
-class MenuBar(tk.LabelFrame):
+class MenuBar(tk.Frame):
     def __init__(
         self,
         parent: tk.Widget,
@@ -12,7 +12,7 @@ class MenuBar(tk.LabelFrame):
         on_new_game: Callable[[], None],
         on_exit: Callable[[], None],
     ):
-        super().__init__(parent, text="Menu")
+        super().__init__(parent)
         self.grid(sticky="NEWS")
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)

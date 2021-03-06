@@ -11,13 +11,13 @@ class Cell(tk.Button):
     def __init__(
         self,
         parent: tk.Widget,
-        id: int,
+        cell_id: int,
         row: int,
         column: int,
         on_click: Callable[[Cell], None],
     ):
-        super().__init__(parent, text=f"{id}", command=lambda: on_click(self))
-        self._id = id
+        super().__init__(parent, text=f"{cell_id}", command=lambda: on_click(self))
+        self._id = cell_id
         self._row = row
         self._column = column
         self.grid(sticky="NEWS", row=row, column=column)

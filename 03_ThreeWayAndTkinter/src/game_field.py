@@ -10,13 +10,12 @@ from cell import Cell
 from direction import Direction
 
 
-class GameField(tk.LabelFrame):
-    # TODO: remove frame label
+class GameField(tk.Frame):
     _size = 4
     _cell_count = _size * _size - 1
 
     def __init__(self, parent, *, on_win: Callable[[], None]):
-        super().__init__(parent, text="App")
+        super().__init__(parent)
         self._on_win = on_win
         self.grid(sticky="NEWS")
         for i in range(self._size):
@@ -43,7 +42,7 @@ class GameField(tk.LabelFrame):
         self.__cells = [
             Cell(
                 self,
-                id=i + 1,
+                cell_id=i + 1,
                 row=positions[i][0],
                 column=positions[i][1],
                 on_click=self._on_cell_click,
