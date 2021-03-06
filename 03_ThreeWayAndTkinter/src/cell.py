@@ -44,3 +44,6 @@ class Cell(tk.Button):
         elif direction == Direction.DOWN:
             self._row += 1
         self.grid(sticky="NEWS", row=self._row, column=self._column)
+
+    def __str__(self):
+        return f"Cell(id={self._id}, position=({self._row}, {self._column}))"

@@ -4,7 +4,7 @@ import operator
 import random
 import tkinter as tk
 import itertools
-from typing import Callable, List, Set
+from typing import Callable, List
 
 from cell import Cell
 from direction import Direction
@@ -28,16 +28,16 @@ class GameField(tk.LabelFrame):
 
     def reset_field(self):
         self.__generate_field()
-        # TODO: check if puzzle is solvable
-        while self._is_game_won():
-            # NOTE: В случае, если сгенерированное поле удовлетворяет условию выигрыша, перегенерируем его
+        while self._is_game_won() or self._is_unsolvable():
+            # NOTE: В случае, если сгенерированное поле удовлетворяет условию выигрыша или нерешаемо,
+            #   перегенерируем его
             self.__generate_field()
 
     def __generate_field(self):
         for c in self.__cells:
             c.destroy()
 
-        positions = list(itertools.product(range(self._size), repeat=2))
+        positions = self._get_all_positions()
         random.shuffle(positions)
 
         self.__cells = [
@@ -91,6 +91,35 @@ class GameField(tk.LabelFrame):
             True,
         )
 
+    def _is_unsolvable(self) -> bool:
+        all_positions = set(self._get_all_positions())
+        occupied_positions = set(map(lambda c: (c.row, c.column), self.__cells))
+        free_position = list(all_positions - occupied_positions)[0]
+
+        score = (
+            1
+            + free_position[0]
+            + functools.reduce(
+                operator.add,
+                map(
+                    lambda pair: 1 if self._is_cells_permuted(pair[0], pair[1]) else 0,
+                    itertools.product(self.__cells, repeat=2),
+                ),
+                0,
+            )
+        )
+        return score % 2 == 1
+
     @classmethod
     def _is_positioned_correctly(cls, cell: Cell):
         return cell.id == cell.row * cls._size + cell.column + 1
+
+    @classmethod
+    def _get_all_positions(cls):
+        return list(itertools.product(range(cls._size), repeat=2))
+
+    @staticmethod
+    def _is_cells_permuted(cell: Cell, other: Cell):
+        return other.id > cell.id and (
+            other.row < cell.row or other.row == cell.row and other.column < cell.column
+        )
