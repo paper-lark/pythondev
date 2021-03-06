@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-
+import random
 import tkinter as tk
+import itertools
 from typing import Callable, List, Set
 
 from direction import Direction
@@ -31,15 +32,17 @@ class GameField(tk.LabelFrame):
         for c in self.__cells:
             c.destroy()
 
-        # TODO: generate random positions
+        positions = list(itertools.product(range(self._size), repeat=2))
+        random.shuffle(positions)
+
         self.__cells = [
             self._create_button_at_position(
-                i, column=i // self._size, row=i % self._size
+                label=i + 1, row=positions[i][0], column=positions[i][1]
             )
             for i in range(self._cell_count)
         ]
 
-    def _create_button_at_position(self, label: int, *, column: int, row: int):
+    def _create_button_at_position(self, *, label: int, column: int, row: int):
         # TODO: use a separate class for a cell
         text = f"{label}"
         btn = tk.Button(self, text=text, command=lambda: self._on_cell_click(text))
@@ -97,5 +100,11 @@ class GameField(tk.LabelFrame):
         cell.grid(row=cell_i, column=cell_j)
 
     def _is_game_won(self):
-        # TODO: implement winning conditions
-        return False
+        is_won = True
+        for c in self.__cells:
+            info = c.grid_info()
+            i, j = info["row"], info["column"]
+            actual_id = int(c.cget("text"))
+            expected_id = i * self._size + j + 1
+            is_won = is_won and actual_id == expected_id
+        return is_won

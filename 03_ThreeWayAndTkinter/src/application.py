@@ -29,6 +29,10 @@ class Application(tk.Frame):
         self.__game_field.reset_field()
 
     def _on_win(self):
+        # NOTE: Задержка нужна для того, чтобы UI успел перерироваться перед отображением сообщения
+        self.after(1, self._process_win)
+
+    def _process_win(self):
         tk_msg.showinfo(self._title, "You won!")
         self._on_new_game()
 
