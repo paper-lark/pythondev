@@ -27,17 +27,17 @@ class Application(tk.Frame):
             return self.__children[item]
 
         app = self
-        name = item
+        widget_name = item
         parent = app
         if "." in item:
-            parent_name, name = item.rsplit(".", 2)
+            parent_name, widget_name = item.rsplit(".", 2)
             if parent_name not in self.__children:
                 raise RuntimeError(f"Parent widget '{parent_name}' does not exist")
             parent = self.__children[parent_name]
 
         def create_object(cls, geom: str, **kwargs) -> tk.Widget:
             class Wrapper(cls):
-                def __init__(self, master: tk.Widget, name: str, **kwargs):
+                def __init__(self, master: tk.Widget, name: str):
                     super().__init__(master=master, **kwargs)
                     self.__name = name
 
@@ -46,7 +46,7 @@ class Application(tk.Frame):
                 ) -> Union[tk.Widget, Callable[[Any, Any], tk.Widget]]:
                     return getattr(app, f"{self.__name}.{it}")
 
-            obj = Wrapper(parent, name=name, **kwargs)
+            obj = Wrapper(parent, name=widget_name)
             try:
                 self._setup_geometry(obj, geom)
             except RuntimeError as err:
