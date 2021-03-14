@@ -4,7 +4,7 @@
 import tkinter as tk
 import tkinter.messagebox as tk_msg
 
-from application import Application
+from Simplified import Application
 
 
 class App(Application):
