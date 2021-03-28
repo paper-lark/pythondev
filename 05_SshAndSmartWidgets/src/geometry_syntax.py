@@ -24,7 +24,7 @@ class GeometrySyntax:
                 cls.__group_results(
                     map(
                         lambda l: cls._parse_line(l[0], l[1]),
-                        enumerate(text.splitlines()),
+                        enumerate(text.splitlines(), start=1),
                     )
                 ),
             )
@@ -46,10 +46,10 @@ class GeometrySyntax:
 
         match = cls._figure_re.match(line)
         if not match:
-            # FIXME: highlight specific invalid part
-            return None, ParseError(line=line_no, start_col=0, end_col=len(line))
+            return None, ParseError(line=line_no)
         return (
             OvalParameters(
+                id=line_no,
                 x0=int(match.group("x0")),
                 y0=int(match.group("y0")),
                 x1=int(match.group("x1")),

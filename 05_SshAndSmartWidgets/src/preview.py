@@ -12,7 +12,7 @@ class Preview(tk.Canvas):
         self,
         master,
         on_figure_created: Callable[[OvalParameters], None],
-        on_figure_updated: Callable[[int, OvalParameters], None],
+        on_figure_updated: Callable[[OvalParameters], None],
     ):
         super().__init__(master)
         self._on_figure_created = on_figure_created
@@ -20,7 +20,7 @@ class Preview(tk.Canvas):
         self._previous_point = None
         self._new_figure = None
         self._moved_figure = None
-        self._figure_index_by_id = {}
+        self._id_by_obj_id = {}
 
         self.grid(sticky="NEWS")
         self.bind("<Button>", self._on_mouse_pressed)
@@ -29,8 +29,8 @@ class Preview(tk.Canvas):
 
     def draw_figures(self, figures: List[OvalParameters]) -> List[int]:
         self.remove_figures()
-        failed_indexes: List[int] = []
-        for i, f in enumerate(figures):
+        failed_ids: List[int] = []
+        for f in figures:
             try:
                 oval_id = self.create_oval(
                     f.x0,
@@ -41,16 +41,16 @@ class Preview(tk.Canvas):
                     outline=f.outline_color,
                     width=f.outline_width,
                 )
-                self._figure_index_by_id[oval_id] = i
-            except RuntimeError:
-                failed_indexes.append(i)
+                self._id_by_obj_id[oval_id] = f.id
+            except tk.TclError:
+                failed_ids.append(f.id)
         # FIXME: if failed to create oval, highlight error
-        return failed_indexes
+        return failed_ids
 
     def remove_figures(self):
         for obj in self.find_all():
             self.delete(obj)
-        self._figure_index_by_id = {}
+        self._id_by_obj_id = {}
         self._reset_action_state()
 
     def _reset_action_state(self):
@@ -105,8 +105,9 @@ class Preview(tk.Canvas):
         if self._moved_figure is not None:
             # submit changes
             params = self._get_figure_params(self._moved_figure)
-            idx = self._figure_index_by_id[self._moved_figure]
-            self._on_figure_updated(idx, params)
+            self.delete(self._moved_figure)
+            if params.id > 0:
+                self._on_figure_updated(params)
 
         elif self._new_figure is not None:
             # submit new figure
@@ -120,6 +121,7 @@ class Preview(tk.Canvas):
     def _get_figure_params(self, figure_id) -> OvalParameters:
         x0, y0, x1, y1 = self.coords(figure_id)
         return OvalParameters(
+            id=self._id_by_obj_id[figure_id] if figure_id in self._id_by_obj_id else 0,
             x0=int(float(x0)),
             y0=int(float(y0)),
             x1=int(float(x1)),

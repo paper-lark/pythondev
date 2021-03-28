@@ -15,7 +15,6 @@ class Application(tk.Frame):
     def __init__(self, master, title: str):
         super().__init__(master)
         self._master = master
-        self._text = ""
 
         self.grid(sticky="NEWS")
         self.columnconfigure(0, weight=1, uniform="app_column")
@@ -56,37 +55,53 @@ class Application(tk.Frame):
         self.__text_field.bind("<Leave>", lambda _: self._on_update_text())
         self.__text_field.bind("<FocusOut>", lambda _: self._on_update_text())
         self.__text_field.bind("<Key-Return>", lambda _: self._on_update_text())
-        # FIXME: remove syntax error when line is edited
 
     def _on_update_text(self):
         self._remove_syntax_errors()
-        self._text = self.__text_field.get("0.0", tk.END)
-        figures, errs = GeometrySyntax.parse(self._text)
+        text = self.__text_field.get("1.0", tk.END)
+        figures, errs = GeometrySyntax.parse(text)
+        failed_line_no = self.__preview.draw_figures(figures)
+        errs += list(map(lambda l: ParseError(line=l), failed_line_no))
         self._display_errors(errs)
-        self.__preview.draw_figures(figures)
 
     def _display_errors(self, errors: List[ParseError]):
         self._remove_syntax_errors()
         for err in errors:
             self.__text_field.tag_add(
                 self._syntax_error_tag,
-                f"{err.line+1}.{err.start_col}",
-                f"{err.line+1}.{err.end_col}",
+                f"{err.line}.0",
+                f"{err.line}.0 + 1l - 1c",
             )
 
     def _remove_syntax_errors(self):
         x = self.__text_field.tag_ranges(self._syntax_error_tag)
-        for i in x:
-            self.__text_field.tag_remove(self._syntax_error_tag, i)
+        for start, end in zip(x[::2], x[1::2]):
+            self.__text_field.tag_remove(self._syntax_error_tag, start, end)
 
     def _on_new_figure_created(self, params: OvalParameters):
-        new_lines = GeometrySyntax.serialize([params])
-        self.__text_field.insert(tk.END, "\n" + new_lines)
+        new_text = GeometrySyntax.serialize([params])
+        line_count = self._count_lines()
+        if (
+            len(self.__text_field.get(f"{line_count}.0", f"{line_count}.0 + 1l - 1c"))
+            > 0
+        ):
+            new_text = "\n" + new_text
+        self.__text_field.insert(tk.END, new_text)
         self._on_update_text()
 
-    def _on_figure_updated(self, idx: int, params: OvalParameters):
-        # FIXME:
-        pass
+    def _on_figure_updated(self, params: OvalParameters):
+        new_text = GeometrySyntax.serialize([params])
+        edited_line = params.id
+        line_count = self._count_lines()
+        if line_count >= edited_line:
+            start = f"{edited_line}.0"
+            end = f"{edited_line}.0 + 1l - 1c"
+            self.__text_field.delete(start, end)
+            self.__text_field.insert(start, new_text)
+            self._on_update_text()
+
+    def _count_lines(self) -> int:
+        return int(self.__text_field.index(tk.END + "-1c").split(".")[0])
 
     def _on_exit(self):
         self._master.destroy()
